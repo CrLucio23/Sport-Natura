@@ -1,0 +1,273 @@
+:root {
+  font-family: Inter, Arial, sans-serif;
+  color: #f3f5f7;
+  background: #0f1411;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(87, 120, 88, 0.2), transparent 30%),
+    #0f1411;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(8px);
+}
+
+.topbar h1,
+.topbar p {
+  margin: 0;
+}
+
+.subtitle {
+  opacity: 0.7;
+  font-size: 0.95rem;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+}
+
+nav a {
+  color: #d8e2d8;
+  text-decoration: none;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+}
+
+nav a.active {
+  background: #7ba36f;
+  color: #081008;
+  font-weight: 700;
+}
+
+.container {
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.hero {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.hero-card,
+.info-card,
+.panel,
+.booking-card,
+.slot,
+.admin-toolbar {
+  background: rgba(20, 29, 22, 0.9);
+  border: 1px solid rgba(162, 192, 149, 0.18);
+  border-radius: 22px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+.hero-card {
+  padding: 2rem;
+}
+
+.hero-card h2 {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  margin-bottom: 0.75rem;
+}
+
+.badge {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  background: #2e4630;
+  color: #d2f0c9;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.button,
+.status-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 14px;
+  padding: 0.8rem 1.1rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.primary {
+  background: #7ba36f;
+  color: #081008;
+  font-weight: 700;
+}
+
+.secondary,
+.status-actions button {
+  background: #202a22;
+  color: #e8f0e8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.grid-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.info-card,
+.panel,
+.booking-card,
+.admin-toolbar {
+  padding: 1.25rem;
+}
+
+.field-group {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  background: #0d120f;
+  color: #f5f7f5;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.checkbox-row {
+  align-self: end;
+}
+
+.checkbox-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
+.slot-list,
+.admin-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+
+.slot.free {
+  border-color: rgba(123, 163, 111, 0.6);
+}
+
+.slot.busy {
+  opacity: 0.7;
+}
+
+.success {
+  color: #9de18d;
+}
+
+.error {
+  color: #ff8f8f;
+}
+
+.booking-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.status.in_attesa {
+  background: #544926;
+}
+
+.status.confermata {
+  background: #294e2f;
+}
+
+.status.annullata {
+  background: #5b2929;
+}
+
+.status-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.admin-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .container {
+    padding: 1rem;
+  }
+
+  .admin-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
