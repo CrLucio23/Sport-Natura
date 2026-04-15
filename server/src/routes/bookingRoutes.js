@@ -13,7 +13,8 @@ const router = Router();
 
 router.get('/slots', getSlots);
 router.get('/availability', getMonthAvailability);
-router.post('/bookings', upload.none(), createBooking);router.get('/admin/bookings', adminAuth, getAdminBookings);
+router.post('/bookings', upload.none(), createBooking);
+router.get('/admin/bookings', adminAuth, getAdminBookings);
 router.patch('/admin/bookings/:id/status', adminAuth, updateBookingStatus);
 
 export default router;

@@ -46,7 +46,7 @@ export async function createBooking(req, res) {
 
   try {
     const { fullName, email, phone, bookingDate, slotId, participants, rentalCount, notes } = req.body;
-    const files = req.files || [];
+    const liberatorieData = JSON.parse(req.body.liberatorieData || '[]');
 
     if (!fullName || !email || !phone || !bookingDate || !slotId || !participants) {
       return res.status(400).json({ message: 'Compila tutti i campi obbligatori' });
@@ -85,35 +85,26 @@ export async function createBooking(req, res) {
 
     const bookingId = bookingResult.rows[0].id;
 
-    // salva le liberatorie
-    for (let i = 0; i < files.length; i++) {
+    // genera e salva le liberatorie DENTRO la transazione
+    const dir = 'uploads/liberatorie';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    for (let i = 0; i < liberatorieData.length; i++) {
+      const dati = liberatorieData[i];
+      const pdfBytes = await fillLiberatoria(dati, dati.firma);
+
+      const filePath = `${dir}/liberatoria_${bookingId}_p${i + 1}.pdf`;
+      fs.writeFileSync(filePath, pdfBytes);
+
       await client.query(
         `INSERT INTO liberatorie (booking_id, participant_index, nome, cognome, file_path)
          VALUES ($1, $2, $3, $4, $5)`,
-        [bookingId, i + 1, `Partecipante`, `${i + 1}`, files[i].path]
+        [bookingId, i + 1, dati.nome, dati.cognome, filePath]
       );
     }
 
     await client.query('COMMIT');
-    
-    const liberatorieData = JSON.parse(req.body.liberatorieData || '[]');
 
-for (let i = 0; i < liberatorieData.length; i++) {
-  const dati = liberatorieData[i];
-  const pdfBytes = await fillLiberatoria(dati, dati.firma);
-
-  const dir = 'uploads/liberatorie';
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-  const filePath = `${dir}/liberatoria_${bookingId}_p${i + 1}.pdf`;
-  fs.writeFileSync(filePath, pdfBytes);
-
-  await client.query(
-    `INSERT INTO liberatorie (booking_id, participant_index, nome, cognome, file_path)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [bookingId, i + 1, dati.nome, dati.cognome, filePath]
-  );
-}
     // email conferma
     const slotResult = await pool.query(
       'SELECT label, start_time, end_time FROM timeslots WHERE id = $1', [slotId]
@@ -151,13 +142,12 @@ export async function getAdminBookings(req, res) {
  const result = await pool.query(
   `SELECT
       b.id,
+      b.rental_count,
       b.booking_date,
       b.participants,
-      b.rental_needed,
       b.notes,
       b.status,
       b.created_at,
-      b.liberatoria_path,        -- ← aggiungi questa riga
       c.full_name,
       c.email,
       c.phone,

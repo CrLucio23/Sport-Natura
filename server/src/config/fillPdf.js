@@ -63,11 +63,5 @@ export async function fillLiberatoria(dati, firmaBase64) {
     });
   }
 
-  // debug — mostra una griglia ogni 50px
-for (let y = 0; y < height; y += 50) {
-  page.drawLine({ start: { x: 0, y }, end: { x: 595, y }, thickness: 0.3, color: rgb(0.8, 0.8, 0.8) });
-  page.drawText(`${Math.round(height - y)}`, { x: 0, y, size: 6, font, color: rgb(0.5, 0.5, 0.5) });
-}
-
   return pdfDoc.save();
 }
