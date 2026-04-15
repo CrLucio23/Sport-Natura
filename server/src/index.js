@@ -5,7 +5,11 @@ dotenv.config();
 import bookingRoutes from './routes/bookingRoutes.js';
 import { pool } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
+import { fileURLToPath } from 'url';
+import path from 'path';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
 
 const app = express();

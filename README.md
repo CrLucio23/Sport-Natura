@@ -50,9 +50,9 @@ x-admin-token: ***supersegreto***
 ```
 
 ## Idee per step successivi
-- login admin vero con JWT
-- calendario più avanzato
-- invio email conferma
-- upload liberatoria
-- pagamento acconto
-- gestione attrezzatura a noleggio
+- Ridifinizione area ADMIN
+- Generazione messaggio wz alla conferma/rifiuto della prenotazion
+- Generazione pdf migliore 
+- Area Utente
+- Eliminazioni prenotazioni dopo 15 gg 
+- Stile avanzato

@@ -95,7 +95,7 @@ export default function Calendar({ selectedDate, onSelectDate }) {
             if (!day) return <div key={`empty-${i}`} />;
 
             const iso = toIso(day);
-          const past = isPast(day) || !isSunday(day);
+            const past = isPast(day) || !isSunday(day);
             const selected = selectedDate === iso;
 
             return (
