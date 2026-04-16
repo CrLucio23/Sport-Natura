@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { login, fetchAdminBookings, updateBookingStatus, deleteBooking, fetchClosedDates, toggleClosedDate } from '../services/api.js';
-const [closedDates, setClosedDates] = useState([]);
-const [showCalendar, setShowCalendar] = useState(false);
 
 export default function AdminPage() {
+  const [closedDates, setClosedDates] = useState([]);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [token, setToken] = useState(localStorage.getItem('admin_token') || '');
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('admin_token'));
   const [username, setUsername] = useState('');
@@ -49,20 +49,20 @@ export default function AdminPage() {
   }
 
   async function handleDelete(id) {
-  if (!confirm('Eliminare definitivamente questa prenotazione?')) return;
-  try {
-    await deleteBooking(id, token);
-    setMessage('Prenotazione eliminata');
-    await loadBookings();
-  } catch (err) {
-    setError(err.message);
+    if (!confirm('Eliminare definitivamente questa prenotazione?')) return;
+    try {
+      await deleteBooking(id, token);
+      setMessage('Prenotazione eliminata');
+      await loadBookings();
+    } catch (err) {
+      setError(err.message);
+    }
   }
-}
 
-async function loadClosedDates() {
-  const data = await fetchClosedDates(token);
-  setClosedDates(data.map(d => d.closed_date.slice(0, 10)));
-}
+  async function loadClosedDates() {
+    const data = await fetchClosedDates(token);
+    setClosedDates(data.map(d => d.closed_date.slice(0, 10)));
+  }
 
 async function handleToggleDate(date) {
   await toggleClosedDate(date, '', token);
