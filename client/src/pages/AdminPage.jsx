@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { login, fetchAdminBookings, updateBookingStatus } from '../services/api.js';
+import { login, fetchAdminBookings, updateBookingStatus, deleteBooking, fetchClosedDates, toggleClosedDate } from '../services/api.js';
+const [closedDates, setClosedDates] = useState([]);
+const [showCalendar, setShowCalendar] = useState(false);
 
 export default function AdminPage() {
   const [token, setToken] = useState(localStorage.getItem('admin_token') || '');
@@ -45,6 +47,40 @@ export default function AdminPage() {
       setLoading(false);
     }
   }
+
+  async function handleDelete(id) {
+  if (!confirm('Eliminare definitivamente questa prenotazione?')) return;
+  try {
+    await deleteBooking(id, token);
+    setMessage('Prenotazione eliminata');
+    await loadBookings();
+  } catch (err) {
+    setError(err.message);
+  }
+}
+
+async function loadClosedDates() {
+  const data = await fetchClosedDates(token);
+  setClosedDates(data.map(d => d.closed_date.slice(0, 10)));
+}
+
+async function handleToggleDate(date) {
+  await toggleClosedDate(date, '', token);
+  await loadClosedDates();
+}
+
+function prossimeDomeniche() {
+  const sundays = [];
+  const today = new Date();
+  let d = new Date(today);
+  // vai al prossimo domenica
+  d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
+  for (let i = 0; i < 16; i++) { // 4 mesi
+    sundays.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 7);
+  }
+  return sundays;
+}
 
   async function handleStatusChange(id, status) {
     try {
@@ -101,6 +137,49 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {isLoggedIn && (
+  <div style={{ marginBottom: '1rem' }}>
+    <button
+      className="button secondary"
+      onClick={() => { setShowCalendar(!showCalendar); if (!showCalendar) loadClosedDates(); }}
+    >
+      {showCalendar ? '✕ Chiudi calendario' : '📅 Gestisci domeniche'}
+    </button>
+
+    {showCalendar && (
+      <div style={{ marginTop: '1rem', background: 'rgba(20,29,22,0.9)', border: '1px solid rgba(162,192,149,0.18)', borderRadius: 16, padding: '1.25rem' }}>
+        <h3 style={{ margin: '0 0 1rem' }}>Domeniche — clicca per chiudere/riaprire</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem' }}>
+          {prossimeDomeniche().map(date => {
+            const closed = closedDates.includes(date);
+            return (
+              <button
+                key={date}
+                onClick={() => handleToggleDate(date)}
+                style={{
+                  padding: '0.6rem',
+                  borderRadius: 10,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: closed ? '#5b2929' : '#294e2f',
+                  color: '#f3f5f7',
+                  fontSize: '0.85rem'
+                }}
+              >
+                {date}<br />
+                <small>{closed ? '🔒 Chiusa' : '✅ Aperta'}</small>
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ opacity: 0.6, fontSize: '0.8rem', marginTop: '0.75rem' }}>
+          Le domeniche chiuse non accettano prenotazioni dal sito.
+        </p>
+      </div>
+    )}
+  </div>
+)}
+
       {loading && <p>Caricamento...</p>}
       {message && <p className="success">{message}</p>}
       {error && <p className="error">{error}</p>}
@@ -142,6 +221,12 @@ export default function AdminPage() {
               <button onClick={() => handleStatusChange(booking.id, 'confermata')}>Conferma</button>
               <button onClick={() => handleStatusChange(booking.id, 'annullata')}>Annulla</button>
               <button onClick={() => handleStatusChange(booking.id, 'in_attesa')}>Reset</button>
+              <button
+  onClick={() => handleDelete(booking.id)}
+  style={{ background: '#5b2929', color: '#f3f5f7' }}
+>
+  Elimina
+</button>
             </div>
           </article>
         ))}

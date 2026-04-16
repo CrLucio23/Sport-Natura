@@ -8,11 +8,14 @@ import authRoutes from './routes/authRoutes.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
+// Dichiara prima app
+const app = express();
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Usa app.use dopo la dichiarazione
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
-
-const app = express();
 const PORT = Number(process.env.PORT || 4000);
 
 app.use(cors());

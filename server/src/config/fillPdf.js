@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEMPLATE_PATH = path.join(__dirname, '../../assets/liberatoria_template.pdf');
+const TEMPLATE_PATH = path.join(__dirname, '../../assets/SCARICO DI RESPONSABILITA OSPITI.pdf');
 
 export async function fillLiberatoria(dati, firmaBase64) {
   const templateBytes = fs.readFileSync(TEMPLATE_PATH);
@@ -12,54 +12,47 @@ export async function fillLiberatoria(dati, firmaBase64) {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const pages = pdfDoc.getPages();
   const page = pages[0];
+  const page2 = pages[1];
   const { height } = page.getSize();
+  const { height: h2 } = page2.getSize();
 
-  function drawText(text, x, y, size = 10) {
-    page.drawText(String(text || ''), {
+  // helper unificato per entrambe le pagine
+  function write(p, text, x, yFromTop, size = 10) {
+    const pageH = p === page ? height : h2;
+    p.drawText(String(text || ''), {
       x,
-      y: height - y, // pdf-lib usa y dal basso, noi dal alto
+      y: pageH - yFromTop,
       size,
       font,
       color: rgb(0, 0, 0)
     });
   }
 
-  // — adatta le coordinate guardando il PDF —
-  // riga "il sottoscritto ___"
-  drawText(`${dati.nome} ${dati.cognome}`, 108, 142);
+  // pagina 1 — riga "il sottoscritto / nato a"
+  write(page, `${dati.nome} ${dati.cognome}`, 108, 375);
+  write(page, dati.luogoNascita, 390, 375);
 
-  // "nato a ___"
-  drawText(dati.luogoNascita, 390, 142);
+  // riga "il (data nascita) / residente in"
+  write(page, dati.dataNascita, 60, 395);
+  write(page, `${dati.cittaResidenza} (${dati.provincia})`, 205, 395);
 
-  // "il ___" (data di nascita)
-  drawText(dati.dataNascita, 60, 158);
+  // riga "Via / n° / Tel/Cell"
+  write(page, dati.indirizzo, 65, 415);
+  write(page, dati.cellulare, 390, 415);
 
-  // "residente in ___"
-  drawText(`${dati.cittaResidenza} (${dati.provincia})`, 270, 158);
+  // pagina 2 — data compilazione e firma
+  write(page2, dati.dataCompilazione, 80, 710);
 
-  // "Via ___ n° ___"
-  drawText(dati.indirizzo, 65, 174);
-
-  // "Tel/Cell ___"
-  drawText(dati.cellulare, 390, 174);
-
-  // data compilazione (pagina 2, in fondo)
-  const page2 = pages[1];
-  const { height: h2 } = page2.getSize();
-
-  page2.drawText(dati.dataCompilazione, 80, h2 - 682, {
-    size: 10, font, color: rgb(0, 0, 0)
-  });
-
-  // firma
   if (firmaBase64) {
-    const firmaBytes = Buffer.from(firmaBase64.replace(/^data:image\/png;base64,/, ''), 'base64');
+    const firmaBytes = Buffer.from(
+      firmaBase64.replace(/^data:image\/png;base64,/, ''), 'base64'
+    );
     const firmaImg = await pdfDoc.embedPng(firmaBytes);
     page2.drawImage(firmaImg, {
       x: 320,
-      y: h2 - 710,
+      y: h2 - 740,
       width: 150,
-      height: 50
+      height: 45
     });
   }
 

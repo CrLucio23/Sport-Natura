@@ -66,11 +66,21 @@ export async function createBooking(req, res) {
       [bookingDate, slotId]
     );
 
+    const closed = await client.query(
+      'SELECT id FROM closed_dates WHERE closed_date = $1', [bookingDate]
+    );
+
+    if (closed.rowCount > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Questa data non è disponibile' });
+    }
+
     if (existing.rowCount > 0) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Questo slot non è più disponibile' });
     }
 
+    // Procede con il resto della creazione della prenotazione
     const customerResult = await client.query(
       `INSERT INTO customers (full_name, email, phone) VALUES ($1, $2, $3) RETURNING id`,
       [fullName, email, phone]
@@ -86,26 +96,25 @@ export async function createBooking(req, res) {
     const bookingId = bookingResult.rows[0].id;
 
     // genera e salva le liberatorie DENTRO la transazione
-    const dir = 'uploads/liberatorie';
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const pdfAttachments = [];
 
     for (let i = 0; i < liberatorieData.length; i++) {
       const dati = liberatorieData[i];
       const pdfBytes = await fillLiberatoria(dati, dati.firma);
+      const filename = `liberatoria_${dati.nome}_${dati.cognome}_p${i + 1}.pdf`;
 
-      const filePath = `${dir}/liberatoria_${bookingId}_p${i + 1}.pdf`;
-      fs.writeFileSync(filePath, pdfBytes);
+      pdfAttachments.push({ filename, content: Buffer.from(pdfBytes) });
 
       await client.query(
         `INSERT INTO liberatorie (booking_id, participant_index, nome, cognome, file_path)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [bookingId, i + 1, dati.nome, dati.cognome, filePath]
+        VALUES ($1, $2, $3, $4, $5)`,
+        [bookingId, i + 1, dati.nome, dati.cognome, filename]
       );
     }
 
     await client.query('COMMIT');
 
-    // email conferma
+    // Invia email di conferma
     const slotResult = await pool.query(
       'SELECT label, start_time, end_time FROM timeslots WHERE id = $1', [slotId]
     );
@@ -126,6 +135,26 @@ export async function createBooking(req, res) {
       ...emailContent
     }).catch((err) => console.error('Errore invio email:', err));
 
+    // email all'admin con PDF allegati
+    transporter.sendMail({
+      from: process.env.SMTP_FROM,
+      to: process.env.ADMIN_EMAIL,
+      subject: `Nuova prenotazione – ${fullName} – ${bookingDate}`,
+      html: `
+        <p>Nuova prenotazione ricevuta.</p>
+        <ul>
+          <li><strong>Nome:</strong> ${fullName}</li>
+          <li><strong>Email:</strong> ${email}</li>
+          <li><strong>Telefono:</strong> ${phone}</li>
+          <li><strong>Data:</strong> ${bookingDate}</li>
+          <li><strong>Partecipanti:</strong> ${participants}</li>
+          <li><strong>Noleggi:</strong> ${rentalCount || 0}</li>
+        </ul>
+        <p>In allegato le liberatorie firmate dei partecipanti.</p>
+      `,
+      attachments: pdfAttachments
+    }).catch((err) => console.error('Errore invio email admin:', err));
+
     res.status(201).json({ message: 'Prenotazione inviata con successo', booking: bookingResult.rows[0] });
 
   } catch (error) {
@@ -134,6 +163,38 @@ export async function createBooking(req, res) {
     res.status(500).json({ message: 'Errore durante la creazione della prenotazione' });
   } finally {
     client.release();
+  }
+}
+
+export async function deleteBooking(req, res) {
+  try {
+    const { id } = req.params;
+
+    // elimina liberatorie prima (cascade lo fa, ma per sicurezza)
+    await pool.query('DELETE FROM liberatorie WHERE booking_id = $1', [id]);
+
+    const result = await pool.query(
+      'DELETE FROM bookings WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Prenotazione non trovata' });
+    }
+
+    // elimina anche il cliente se non ha altre prenotazioni
+    const customerId = result.rows[0].customer_id;
+    const others = await pool.query(
+      'SELECT id FROM bookings WHERE customer_id = $1', [customerId]
+    );
+    if (others.rowCount === 0) {
+      await pool.query('DELETE FROM customers WHERE id = $1', [customerId]);
+    }
+
+    res.json({ message: 'Prenotazione eliminata' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Errore eliminazione prenotazione' });
   }
 }
 
@@ -237,5 +298,43 @@ export async function getMonthAvailability(req, res) {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Errore nel recupero disponibilità' });
+  }
+}
+
+
+// nuove funzioni admin
+export async function getClosedDates(req, res) {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM closed_dates ORDER BY closed_date ASC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Errore' });
+  }
+}
+
+export async function toggleClosedDate(req, res) {
+  try {
+    const { date, reason } = req.body;
+    if (!date) return res.status(400).json({ message: 'Data obbligatoria' });
+
+    // se esiste → riapre, se non esiste → chiude
+    const existing = await pool.query(
+      'SELECT id FROM closed_dates WHERE closed_date = $1', [date]
+    );
+
+    if (existing.rowCount > 0) {
+      await pool.query('DELETE FROM closed_dates WHERE closed_date = $1', [date]);
+      return res.json({ message: 'Data riaperta', open: true });
+    } else {
+      await pool.query(
+        'INSERT INTO closed_dates (closed_date, reason) VALUES ($1, $2)',
+        [date, reason || null]
+      );
+      return res.json({ message: 'Data chiusa', open: false });
+    }
+  } catch (err) {
+    res.status(500).json({ message: 'Errore' });
   }
 }

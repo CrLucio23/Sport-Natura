@@ -63,3 +63,33 @@ export async function fetchMonthAvailability(year, month) {
   if (!response.ok) throw new Error('Errore nel caricamento disponibilità');
   return response.json();
 }
+
+export async function fetchClosedDates(token) {
+  const res = await fetch(`${API_URL}/admin/closed-dates`, {
+    headers: authHeaders(token)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message);
+  return data;
+}
+
+export async function toggleClosedDate(date, reason, token) {
+  const res = await fetch(`${API_URL}/admin/closed-dates`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ date, reason })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message);
+  return data;
+}
+
+export async function deleteBooking(id, token) {
+  const res = await fetch(`${API_URL}/admin/bookings/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(token)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message);
+  return data;
+}

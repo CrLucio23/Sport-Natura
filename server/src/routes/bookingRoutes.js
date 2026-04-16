@@ -4,13 +4,21 @@ import {
   getAdminBookings,
   getSlots,
   getMonthAvailability,
-  updateBookingStatus
+  updateBookingStatus,
+  deleteBooking,
+  getClosedDates,
+  toggleClosedDate
 } from '../controllers/bookingController.js';
 import { adminAuth } from '../middleware/adminAuth.js';
 import { upload } from '../config/upload.js';
 
+// Dichiara prima il router
 const router = Router();
 
+// Definisci le rotte
+router.get('/admin/closed-dates', adminAuth, getClosedDates);
+router.post('/admin/closed-dates', adminAuth, toggleClosedDate);
+router.delete('/admin/bookings/:id', adminAuth, deleteBooking);
 router.get('/slots', getSlots);
 router.get('/availability', getMonthAvailability);
 router.post('/bookings', upload.none(), createBooking);
