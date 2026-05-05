@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEMPLATE_PATH = path.join(__dirname, '../../assets/SCARICO DI RESPONSABILITA OSPITI.pdf');
+const TEMPLATE_PATH = path.join(__dirname, '../../assets/liberatoria_template.pdf');
 
 export async function fillLiberatoria(dati, firmaBase64) {
   const templateBytes = fs.readFileSync(TEMPLATE_PATH);

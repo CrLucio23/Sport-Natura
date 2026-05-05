@@ -2,7 +2,6 @@ import { pool } from '../config/db.js';
 import { transporter } from '../config/mailer.js';
 import { bookingConfirmationEmail } from '../config/emailTemplates.js';
 import { fillLiberatoria } from '../config/fillPdf.js';
-import fs from 'fs';
 
 export async function getSlots(req, res) {
   try {
@@ -95,8 +94,7 @@ export async function createBooking(req, res) {
 
     const bookingId = bookingResult.rows[0].id;
 
-    // genera e salva le liberatorie DENTRO la transazione
-    const pdfAttachments = [];
+   const pdfAttachments = [];
 
     for (let i = 0; i < liberatorieData.length; i++) {
       const dati = liberatorieData[i];
