@@ -56,13 +56,19 @@ export default function Calendar({ selectedDate, onSelectDate }) {
     return new Date(toIso(day)) < new Date(today.toISOString().slice(0, 10));
   }
 
-  function isSunday(day) {
-  return new Date(toIso(day)).getDay() === 0;
+function isSunday(day) {
+  // usa UTC per evitare problemi di fuso orario
+  return new Date(toIso(day) + 'T12:00:00Z').getUTCDay() === 0;
+}
+
+function isDisabled(day) {
+  return isPast(day) || !isSunday(day) || availability[toIso(day)] === 'closed' || availability[toIso(day)] === 'full';
 }
 
   function statusColor(day) {
     const key = toIso(day);
     const status = availability[key];
+    if(status === 'closed') return '#3a2a3a';
     if (status === 'full') return '#5b2929';
     if (status === 'partial') return '#544926';
     return '#294e2f';

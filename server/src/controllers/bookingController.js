@@ -52,7 +52,7 @@ export async function createBooking(req, res) {
       return res.status(400).json({ message: 'Compila tutti i campi obbligatori' });
     }
 
-    const dayOfWeek = new Date(bookingDate).getUTCDay();
+    const dayOfWeek = new Date(bookingDate + 'T12:00:00Z').getUTCDay();
     if (dayOfWeek !== 0) {
       return res.status(400).json({ message: 'Le prenotazioni sono disponibili solo la domenica' });
     }
@@ -262,17 +262,14 @@ export async function updateBookingStatus(req, res) {
 export async function getMonthAvailability(req, res) {
   try {
     const { year, month } = req.query;
-
-    if (!year || !month) {
-      return res.status(400).json({ message: 'Anno e mese obbligatori' });
-    }
+    if (!year || !month) return res.status(400).json({ message: 'Anno e mese obbligatori' });
 
     const totalSlotsResult = await pool.query(
       `SELECT COUNT(*) FROM timeslots WHERE is_active = TRUE`
     );
     const totalSlots = Number(totalSlotsResult.rows[0].count);
 
-    const result = await pool.query(
+    const bookingsResult = await pool.query(
       `SELECT booking_date, COUNT(*) as booked_slots
        FROM bookings
        WHERE EXTRACT(YEAR FROM booking_date) = $1
@@ -282,16 +279,25 @@ export async function getMonthAvailability(req, res) {
       [year, month]
     );
 
-    const availability = {};
-    result.rows.forEach((row) => {
-      const dateKey = row.booking_date.toISOString().slice(0, 10);
-      const bookedSlots = Number(row.booked_slots);
+    // date chiuse dall'admin in questo mese
+    const closedResult = await pool.query(
+      `SELECT closed_date FROM closed_dates
+       WHERE EXTRACT(YEAR FROM closed_date) = $1
+         AND EXTRACT(MONTH FROM closed_date) = $2`,
+      [year, month]
+    );
 
-      if (bookedSlots >= totalSlots) {
-        availability[dateKey] = 'full';
-      } else {
-        availability[dateKey] = 'partial';
-      }
+    const availability = {};
+
+    bookingsResult.rows.forEach((row) => {
+      const dateKey = row.booking_date.toISOString().slice(0, 10);
+      availability[dateKey] = Number(row.booked_slots) >= totalSlots ? 'full' : 'partial';
+    });
+
+    // le date chiuse sovrascrivono tutto → 'closed'
+    closedResult.rows.forEach((row) => {
+      const dateKey = row.closed_date.toISOString().slice(0, 10);
+      availability[dateKey] = 'closed';
     });
 
     res.json({ totalSlots, availability });
