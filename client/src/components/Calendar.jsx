@@ -97,34 +97,37 @@ function isDisabled(day) {
         <p style={{ textAlign: 'center', opacity: 0.6 }}>Caricamento...</p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-          {cells.map((day, i) => {
-            if (!day) return <div key={`empty-${i}`} />;
+      {cells.map((day, i) => {
+        if (!day) return <div key={`empty-${i}`} />;
 
-            const iso = toIso(day);
-            const past = isPast(day) || !isSunday(day);
-            const selected = selectedDate === iso;
+        const iso = toIso(day);
+        const disabled = isDisabled(day);  // ← usa isDisabled, non past
+        const selected = selectedDate === iso;
+        const closed = availability[iso] === 'closed';
 
-            return (
-              <button
-                key={iso}
-                disabled={past}
-                onClick={() => !past && onSelectDate(iso)}
-                style={{
-                  background: selected ? '#7ba36f' : statusColor(day),
-                  color: selected ? '#081008' : '#f3f5f7',
-                  border: selected ? '2px solid #7ba36f' : '1px solid transparent',
-                  borderRadius: 8,
-                  padding: '0.5rem 0',
-                  cursor: past ? 'not-allowed' : 'pointer',
-                  opacity: past ? 0.3 : 1,
-                  fontWeight: selected ? 700 : 400,
-                  fontSize: '0.9rem'
-                }}
-              >
-                {day}
-              </button>
-            );
-          })}
+        return (
+          <button
+            key={iso}
+            disabled={disabled}
+            onClick={() => !disabled && onSelectDate(iso)}
+            title={closed ? 'Data chiusa' : ''}
+            style={{
+              background: selected ? '#7ba36f' : statusColor(day),
+              color: selected ? '#081008' : '#f3f5f7',
+              border: selected ? '2px solid #7ba36f' : '1px solid transparent',
+              borderRadius: 8,
+              padding: '0.5rem 0',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.3 : 1,
+              fontWeight: selected ? 700 : 400,
+              fontSize: '0.9rem'
+            }}
+          >
+            {day}
+            {closed && <span style={{ display: 'block', fontSize: '0.6rem' }}>🔒</span>}
+          </button>
+        );
+      })}
         </div>
       )}
 
@@ -134,6 +137,7 @@ function isDisabled(day) {
           { color: '#294e2f', label: 'Disponibile' },
           { color: '#544926', label: 'Parzialmente occupato' },
           { color: '#5b2929', label: 'Completo' },
+          {color : '#3a2a3a' , label : 'Chiusa'},
         ].map(({ color, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <div style={{ width: 12, height: 12, borderRadius: 3, background: color }} />

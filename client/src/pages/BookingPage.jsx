@@ -4,22 +4,24 @@ import ParticipantForm from '../components/ParticipantForm.jsx';
 import { createBooking, fetchSlots } from '../services/api.js';
 import { generaLiberatoriaPDF } from '../services/pdf.js';
 
-function todayIso() {
-  const now = new Date();
-  return new Date(now - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+function nextSunday() {
+  const d = new Date();
+  const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
+  d.setDate(d.getDate() + daysUntilSunday);
+  return d.toISOString().slice(0, 10);
 }
 
 function emptyParticipant() {
   return {
     nome: '', cognome: '', luogoNascita: '', dataNascita: '',
     cittaResidenza: '', provincia: '', indirizzo: '',
-    cellulare: '', dataCompilazione: todayIso(), firma: null
+    cellulare: '', dataCompilazione: nextSunday(), firma: null
   };
 }
 
 export default function BookingPage() {
   const [step, setStep] = useState(1);
-  const [bookingDate, setBookingDate] = useState(todayIso());
+  const [bookingDate, setBookingDate] = useState(nextSunday());
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [message, setMessage] = useState('');
