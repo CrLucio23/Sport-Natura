@@ -31,19 +31,19 @@ export async function fillLiberatoria(dati, firmaBase64) {
   }
 
   // pagina 1 — riga "il sottoscritto / nato a"
-  write(page, `${dati.nome} ${dati.cognome}`, 108, 350);
-  write(page, dati.luogoNascita, 390, 350);
+  write(page, `${dati.nome} ${dati.cognome}`, 118, 266);
+  write(page, dati.luogoNascita, 340, 266);
 
   // riga "il (data nascita) / residente in"
-  write(page, dati.dataNascita, 60, 370);
-  write(page, `${dati.cittaResidenza} (${dati.provincia})`, 205, 370);
+  write(page, dati.dataNascita, 120, 289);
+  write(page, `${dati.cittaResidenza} (${dati.provincia})`, 240, 289);
 
   // riga "Via / n° / Tel/Cell"
-  write(page, dati.indirizzo, 65, 390);
-  write(page, dati.cellulare, 390, 390);
+  write(page, dati.indirizzo, 120, 312);
+  write(page, dati.cellulare, 320, 312);
 
   // pagina 2 — data compilazione e firma
-  write(page2, dati.dataCompilazione, 80, 665);
+  write(page2, dati.dataCompilazione, 80, 655);
 
   if (firmaBase64) {
     const firmaBytes = Buffer.from(
@@ -52,8 +52,8 @@ export async function fillLiberatoria(dati, firmaBase64) {
     );
     const firmaImg = await pdfDoc.embedPng(firmaBytes);
     page2.drawImage(firmaImg, {
-      x: 320,
-      y: h2 - 695,
+      x: 340,
+      y: h2 - 680,
       width: 150,
       height: 45,
     });
