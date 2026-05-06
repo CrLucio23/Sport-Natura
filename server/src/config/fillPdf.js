@@ -1,10 +1,13 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEMPLATE_PATH = path.join(__dirname, '../../assets/liberatoria_template.pdf');
+const TEMPLATE_PATH = path.join(
+  __dirname,
+  "../../assets/liberatoria_template.pdf",
+);
 
 export async function fillLiberatoria(dati, firmaBase64) {
   const templateBytes = fs.readFileSync(TEMPLATE_PATH);
@@ -16,15 +19,14 @@ export async function fillLiberatoria(dati, firmaBase64) {
   const { height } = page.getSize();
   const { height: h2 } = page2.getSize();
 
-  // helper unificato per entrambe le pagine
   function write(p, text, x, yFromTop, size = 10) {
     const pageH = p === page ? height : h2;
-    p.drawText(String(text || ''), {
+    p.drawText(String(text || ""), {
       x,
       y: pageH - yFromTop,
       size,
       font,
-      color: rgb(0, 0, 0)
+      color: rgb(0, 0, 0),
     });
   }
 
@@ -45,14 +47,15 @@ export async function fillLiberatoria(dati, firmaBase64) {
 
   if (firmaBase64) {
     const firmaBytes = Buffer.from(
-      firmaBase64.replace(/^data:image\/png;base64,/, ''), 'base64'
+      firmaBase64.replace(/^data:image\/png;base64,/, ""),
+      "base64",
     );
     const firmaImg = await pdfDoc.embedPng(firmaBytes);
     page2.drawImage(firmaImg, {
       x: 320,
       y: h2 - 740,
       width: 150,
-      height: 45
+      height: 45,
     });
   }
 
