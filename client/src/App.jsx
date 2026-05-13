@@ -11,16 +11,16 @@ export default function App() {
       style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
     >
       <header className="topbar">
+        {/* brand — solo img, nessun figlio che sia un <a> */}
         <Link to="/" className="topbar-brand">
-          <span className="topbar-logo">
-            Sport<em>&</em>Natura
-          </span>
-          <span className="topbar-divider" />
-          <span className="topbar-tagline">ASD Softair Team</span>
+          <img src="/logo.png" alt="Sport&Natura" style={{ height: 48 }} />
         </Link>
 
+        {/* nav — fratello del brand, non figlio */}
         <nav>
-          <NavLink to="/">Home</NavLink>
+          <NavLink to="/" end>
+            Home
+          </NavLink>
           <NavLink to="/chi-siamo">Chi Siamo</NavLink>
           <NavLink to="/contatti">Contatti</NavLink>
           <NavLink to="/prenota" className="nav-cta">
@@ -108,7 +108,7 @@ export default function App() {
               <span style={{ color: "var(--text-dim)", fontSize: "0.88rem" }}>
                 Piazzale dei Capi
                 <br />
-                Vico Equense(NA) 80069
+                Vico Equense (NA) 80069
               </span>
             </div>
           </div>

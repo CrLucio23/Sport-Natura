@@ -44,6 +44,7 @@ export default function ParticipantForm({ index, data, onChange }) {
         <div className="field-group">
           <label>Luogo di nascita *</label>
           <input
+            list={`luoghi-nascita-${index}`}
             value={data.luogoNascita || ""}
             onChange={(e) => handleField("luogoNascita", e.target.value)}
             required
@@ -68,6 +69,7 @@ export default function ParticipantForm({ index, data, onChange }) {
         <div className="field-group">
           <label>Città di residenza *</label>
           <input
+            list={`citta-residenza-${index}`}
             value={data.cittaResidenza || ""}
             onChange={(e) => {
               const value = e.target.value;
@@ -81,7 +83,6 @@ export default function ParticipantForm({ index, data, onChange }) {
                 provincia: comune ? comune.provincia : data.provincia,
               });
             }}
-            onChange={(e) => handleField("cittaResidenza", e.target.value)}
             required
           />
           <datalist id={`citta-residenza-${index}`}>
