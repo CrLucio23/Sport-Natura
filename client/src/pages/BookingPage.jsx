@@ -86,6 +86,10 @@ export default function BookingPage() {
     loadSlots();
   }, [bookingDate]);
 
+  useEffect(() => {
+    // forza il calendario a ricaricare i dati quando arrivi sulla pagina
+    window.dispatchEvent(new Event("focus"));
+  }, []);
   const availableSlots = useMemo(
     () => slots.filter((s) => s.available),
     [slots],
@@ -208,7 +212,6 @@ export default function BookingPage() {
   return (
     <div className="container">
       <div className="panel">
-        {/* step bar */}
         <div className="step-bar">
           {["Info prenotazione", "Liberatorie partecipanti"].map((label, i) => {
             const st =
@@ -246,6 +249,7 @@ export default function BookingPage() {
             <div className="field-group">
               <label>Seleziona una domenica</label>
               <Calendar
+                key={bookingDate.slice(0, 7)} // ricarica quando cambia mese
                 selectedDate={bookingDate}
                 onSelectDate={setBookingDate}
               />
@@ -299,8 +303,11 @@ export default function BookingPage() {
                   ) : (
                     availableSlots.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.label} — {s.start_time.slice(0, 5)} /{" "}
+                        {s.label} — {s.start_time.slice(0, 5)} /
                         {s.end_time.slice(0, 5)}
+                        {s.remaining < 6
+                          ? ` (${s.remaining} posti rimasti)`
+                          : ""}
                       </option>
                     ))
                   )}

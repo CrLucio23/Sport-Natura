@@ -7,32 +7,38 @@ import fs from "fs";
 export async function getSlots(req, res) {
   try {
     const { date } = req.query;
-
-    if (!date) {
+    if (!date)
       return res.status(400).json({ message: "La data è obbligatoria" });
-    }
+
+    const MAX = 6;
 
     const slotsResult = await pool.query(
-      `SELECT id, label, start_time, end_time
-       FROM timeslots
-       WHERE is_active = TRUE
-       ORDER BY start_time`,
+      `SELECT id, label, start_time, end_time FROM timeslots WHERE is_active = TRUE ORDER BY start_time`,
     );
 
     const bookedResult = await pool.query(
-      `SELECT slot_id
+      `SELECT slot_id, COALESCE(SUM(participants), 0) AS total_participants
        FROM bookings
-       WHERE booking_date = $1
-         AND status IN ('in_attesa', 'confermata')`,
+       WHERE booking_date = $1 AND status IN ('in_attesa', 'confermata')
+       GROUP BY slot_id`,
       [date],
     );
 
-    const bookedIds = new Set(bookedResult.rows.map((row) => row.slot_id));
+    const bookedMap = {};
+    bookedResult.rows.forEach((r) => {
+      bookedMap[r.slot_id] = Number(r.total_participants);
+    });
 
-    const slots = slotsResult.rows.map((slot) => ({
-      ...slot,
-      available: !bookedIds.has(slot.id),
-    }));
+    const slots = slotsResult.rows.map((slot) => {
+      const booked = bookedMap[slot.id] || 0;
+      const remaining = MAX - booked;
+      return {
+        ...slot,
+        available: remaining > 0,
+        remaining,
+        booked,
+      };
+    });
 
     res.json(slots);
   } catch (error) {
@@ -91,28 +97,32 @@ export async function createBooking(req, res) {
 
     await client.query("BEGIN");
 
-    const existing = await client.query(
-      `SELECT id FROM bookings
-       WHERE booking_date = $1 AND slot_id = $2 AND field_id = 1
-         AND status IN ('in_attesa', 'confermata')`,
-      [bookingDate, slotId],
-    );
-
     const closed = await client.query(
-      "SELECT id FROM closed_dates WHERE closed_date = $1",
+      "SELECT id FROM closed_dates WHERE closed_date = $1::date",
       [bookingDate],
     );
-
     if (closed.rowCount > 0) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ message: "Questa data non è disponibile" });
+      return res
+        .status(400)
+        .json({ message: "Questa domenica non è disponibile" });
     }
 
-    if (existing.rowCount > 0) {
+    const occupiedResult = await client.query(
+      `SELECT COALESCE(SUM(participants), 0) AS total
+   FROM bookings
+   WHERE booking_date = $1 AND slot_id = $2 AND field_id = 1
+     AND status IN ('in_attesa', 'confermata')`,
+      [bookingDate, slotId],
+    );
+    const occupied = Number(occupiedResult.rows[0].total);
+    const MAX = 6;
+
+    if (occupied + Number(participants) > MAX) {
       await client.query("ROLLBACK");
-      return res
-        .status(409)
-        .json({ message: "Questo slot non è più disponibile" });
+      return res.status(409).json({
+        message: `Posti insufficienti — rimangono solo ${MAX - occupied} posti`,
+      });
     }
 
     // Procede con il resto della creazione della prenotazione
@@ -257,8 +267,7 @@ export async function getAdminBookings(req, res) {
       `SELECT
       b.id,
       b.rental_count,
-      b.booking_date,
-      b.participants,
+TO_CHAR(b.booking_date, 'YYYY-MM-DD') AS booking_date,      b.participants,
       b.notes,
       b.status,
       b.created_at,
@@ -288,8 +297,8 @@ export async function updateBookingStatus(req, res) {
     const { id } = req.params;
     const { status, rejectionReason } = req.body;
 
-    const validStatuses = ["in_attesa", "confermata", "annullata"];
-    if (!validStatuses.includes(status)) {
+    const allowed = ["in_attesa", "confermata", "annullata"];
+    if (!allowed.includes(status)) {
       return res.status(400).json({ message: "Stato non valido" });
     }
 
@@ -314,47 +323,49 @@ export async function getMonthAvailability(req, res) {
     if (!year || !month)
       return res.status(400).json({ message: "Anno e mese obbligatori" });
 
+    const MAX = 6;
+
     const totalSlotsResult = await pool.query(
       `SELECT COUNT(*) FROM timeslots WHERE is_active = TRUE`,
     );
     const totalSlots = Number(totalSlotsResult.rows[0].count);
 
     const bookingsResult = await pool.query(
-      `SELECT booking_date, COUNT(*) as booked_slots
+      `SELECT booking_date, slot_id, COALESCE(SUM(participants), 0) AS total_participants
        FROM bookings
        WHERE EXTRACT(YEAR FROM booking_date) = $1
          AND EXTRACT(MONTH FROM booking_date) = $2
          AND status IN ('in_attesa', 'confermata')
-       GROUP BY booking_date`,
+       GROUP BY booking_date, slot_id`,
       [year, month],
     );
 
-    // date chiuse dall'admin in questo mese
     const closedResult = await pool.query(
-      `SELECT closed_date FROM closed_dates
-       WHERE EXTRACT(YEAR FROM closed_date) = $1
-         AND EXTRACT(MONTH FROM closed_date) = $2`,
+      `SELECT TO_CHAR(closed_date, 'YYYY-MM-DD') AS closed_date
+   FROM closed_dates
+   WHERE EXTRACT(YEAR FROM closed_date) = $1
+     AND EXTRACT(MONTH FROM closed_date) = $2`,
       [year, month],
     );
 
     const availability = {};
 
     bookingsResult.rows.forEach((row) => {
-      const dateKey = row.booking_date.toISOString().slice(0, 10);
-      const booked = Number(row.booked_slots);
-      // con 1 solo slot attivo: qualsiasi prenotazione = campo pieno
-      // se ci fossero più slot in futuro, 'partial' si attiverebbe
-      if (booked >= totalSlots) {
+      const dateKey =
+        typeof row.booking_date === "string"
+          ? row.booking_date.slice(0, 10)
+          : row.booking_date.toISOString().slice(0, 10);
+      const total = Number(row.total_participants);
+
+      if (total >= MAX * totalSlots) {
         availability[dateKey] = "full";
       } else {
         availability[dateKey] = "partial";
       }
     });
 
-    // le date chiuse sovrascrivono tutto → 'closed'
     closedResult.rows.forEach((row) => {
-      const dateKey = row.closed_date.toISOString().slice(0, 10);
-      availability[dateKey] = "closed";
+      availability[row.closed_date] = "closed";
     });
 
     res.json({ totalSlots, availability });
@@ -363,7 +374,6 @@ export async function getMonthAvailability(req, res) {
     res.status(500).json({ message: "Errore nel recupero disponibilità" });
   }
 }
-
 // nuove funzioni admin
 export async function getClosedDates(req, res) {
   try {
